@@ -27,6 +27,8 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
+
+    
     const userCollection = client.db('assainment11').collection("users");
     app.get('/users', async (req, res) => {
       const cursor = userCollection.find()
@@ -53,6 +55,8 @@ async function run() {
       res.send(result);
     });
 
+
+
     const newCollection = client.db('assainment11').collection("new");
     app.get('/new', async (req, res) => {
       const cursor = newCollection.find()
@@ -71,7 +75,31 @@ async function run() {
       const result = await newCollection.deleteOne(quary);
       res.send(result)
 
-  })
+    })
+    app.get('/new/:id', async (req, res) => {
+      const id = req.params.id;
+      const quary = { _id: ObjectId.createFromHexString(id) }
+      const user = await newCollection.findOne(quary)
+      res.send(user)
+    });
+    app.put('/user/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId.createFromHexString(id) }
+      const options = { upsert: true }
+      const UpdateCycle = req.body
+      const Cycle = {
+        $set: {
+          product_name: UpdateCycle.product_name,
+          brand_name: UpdateCycle.brand_name,
+          query_title: UpdateCycle.query_title
+        }
+      }
+      const result = await newCollection.updateOne(filter, Cycle, options)
+      res.send(result)
+    });
+
+
+    const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -80,22 +108,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-// async function run() {
-//   try {
-
-
-
-
-
-//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-//   } finally {
-//     // Ensures that the client will close when you finish/error
-//     await client.close();
-//   }
-// }
-// run().catch(console.dir);
-
 
 app.get('/', (req, res) => {
   res.send('server is running')
