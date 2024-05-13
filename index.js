@@ -29,60 +29,63 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
-    const userCollection = client.db('assainment11').collection("users");
-    const newCollection = client.db('assainment11').collection("new");
+    const QuariesCollection = client.db('assainment11').collection("users");
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
     // Routes for user collection
     app.get('/users', async (req, res) => {
-      const cursor = userCollection.find();
+      const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
     app.post('/users', async (req, res) => {
       const user = req.body;
-      const result = await userCollection.insertOne(user);
+      const result = await QuariesCollection.insertOne(user);
       res.send(result);
     });
 
     app.get('/users/:id', async (req, res) => {
       const id = req.params.id;
       const quary = { _id: ObjectId.createFromHexString(id) };
-      const user = await userCollection.findOne(quary);
+      const user = await QuariesCollection.findOne(quary);
       res.send(user);
     });
 
     app.get('/user/last', async (req, res) => {
-      const cursor = userCollection.find().sort({ _id: -1 }).limit(6);
+      const cursor = QuariesCollection.find().sort({ _id: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
 
     // Routes for new collection
     app.get('/new', async (req, res) => {
-      const cursor = newCollection.find();
+      const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
-
+    app.get('/new/:email', async (req, res) => {
+      const email = req.params.email;
+      const data = await QuariesCollection.find({ email: email }).toArray();
+      res.send(data);
+    });
     app.post('/new', async (req, res) => {
       const user = req.body;
-      const result = await newCollection.insertOne(user);
+      const result = await QuariesCollection.insertOne(user);
       res.send(result);
     });
 
     app.delete("/new/:id", async (req, res) => {
       const id = req.params.id;
       const quary = { _id: ObjectId.createFromHexString(id) };
-      const result = await newCollection.deleteOne(quary);
+      const result = await QuariesCollection.deleteOne(quary);
       res.send(result);
     });
 
     app.get('/new/:id', async (req, res) => {
       const id = req.params.id;
       const quary = { _id: ObjectId.createFromHexString(id) };
-      const user = await newCollection.findOne(quary);
+      const user = await QuariesCollection.findOne(quary);
       res.send(user);
     });
 
@@ -98,7 +101,7 @@ async function run() {
           query_title: UpdateCycle.query_title
         }
       };
-      const result = await newCollection.updateOne(filter, Cycle, options);
+      const result = await QuariesCollection.updateOne(filter, Cycle, options);
       res.send(result);
     });
 
@@ -125,6 +128,12 @@ async function run() {
         console.error("Error fetching recommendations:", error);
         res.status(500).send("Internal Server Error");
       }
+    });
+
+    app.get('/recommendations/:email', async (req, res) => {
+      const email = req.params.email;
+      const data = await RecommendedCollection.find({ userEmail: email }).toArray();
+      res.send(data);
     });
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
