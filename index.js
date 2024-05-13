@@ -33,11 +33,13 @@ async function run() {
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
     // Routes for user collection
+
     app.get('/users', async (req, res) => {
       const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
+
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -51,14 +53,37 @@ async function run() {
       const user = await QuariesCollection.findOne(quary);
       res.send(user);
     });
+    app.get('/users/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: ObjectId.createFromHexString(id) };
+
+        // Find the user by ID and increment recommendation_count
+        const user = await QuariesCollection.findOneAndUpdate(
+          query,
+          { $inc: { recommendation_count: 1 } },
+          { returnOriginal: false } // To return the updated document
+        );
+
+        if (!user.value) {
+          // If user not found, return 404
+          return res.status(404).send("User not found");
+        }
+
+        // Return the updated user data
+        res.send(user.value);
+      } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
 
     app.get('/user/last', async (req, res) => {
       const cursor = QuariesCollection.find().sort({ _id: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
-
-    // Routes for new collection
     app.get('/new', async (req, res) => {
       const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
@@ -118,6 +143,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/recommended/:id", async (req, res) => {
+      const id = req.params.id;
+      const quary = { _id: ObjectId.createFromHexString(id) };
+      const result = await RecommendedCollection.deleteOne(quary);
+      res.send(result);
+    });
+    
     app.get('/recommended/:queryId', async (req, res) => {
       try {
         const queryId = req.params.queryId;
@@ -132,7 +164,7 @@ async function run() {
 
     app.get('/recommendations/:email', async (req, res) => {
       const email = req.params.email;
-      const data = await RecommendedCollection.find({ userEmail: email }).toArray();
+      const data = await RecommendedCollection.find({ Recommender_Email: email }).toArray();
       res.send(data);
     });
 
