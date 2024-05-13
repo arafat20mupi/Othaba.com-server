@@ -100,6 +100,18 @@ async function run() {
 
 
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
+    
+    app.get('/recommended', async (req, res) => {
+      const cursor = RecommendedCollection.find()
+      const result = await cursor.toArray();
+      res.send(result)
+    });
+    app.post('/recommended', async (req, res) => {
+      const user = req.body;
+      console.log('new user ', user)
+      const result = await RecommendedCollection.insertOne(user);
+      res.send(result)
+    })
 
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
