@@ -11,7 +11,10 @@ app.use(cookieParser())
 app.use(cors({
   origin: [
     "http://localhost:5173",
+    "https://assienment-11.firebaseapp.com",
+    "https://assienment-11.web.app"
   ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
 }));
 app.use(express.json());
@@ -35,7 +38,6 @@ const logger = (req, res, next) => {
 
 const varifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
-  // console.log("token in middile ware" , token);
   if (!token) {
     return res.status(401).send({ message: 'unauthorized access' });
   }
@@ -48,10 +50,15 @@ const varifyToken = (req, res, next) => {
     }
   })
 }
-
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
 async function run() {
   try {
-    await client.connect();
+    // await client.connect(); 
+
     const QuariesCollection = client.db('assainment11').collection("users");
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
@@ -66,11 +73,7 @@ async function run() {
       const user = req.body;
       console.log('user token', user);
       const token = jwt.sign(user, process.env.ACCESS_TOKON_SECRET, { expiresIn: '1h' });
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      })
+      res.cookie('token', token, cookieOptions )
         .send({ success: true });
     })
 
@@ -78,7 +81,7 @@ async function run() {
       const user = req.body;
       console.log('logging out', user);
       res
-        .clearCookie('token', { maxAge: 0, sameSite: 'none', secure: true })
+        .clearCookie('token', {...cookieOptions , maxAge: 0 })
         .send({ success: true })
     })
 
