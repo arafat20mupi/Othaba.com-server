@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
@@ -30,7 +31,27 @@ async function run() {
     const QuariesCollection = client.db('assainment11').collection("users");
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
-    // Routes for user collection
+    // auth api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      console.log('user token', user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKON_SECRET, { expiresIn: '1h' });
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      })
+        .send({ success: true });
+    })
+    app.post('logout', async (req, res) => {
+      const user = req.body;
+      console.log('Log out user', user);
+      res.clearCookie('token', { maxAge: 0 }).send({ success: true });
+    })
+
+
+    // Routes for Quaries Collection
     app.get('/users', async (req, res) => {
       const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
@@ -104,43 +125,19 @@ async function run() {
       res.send(result);
     });
 
-    // New route to increment recommendation count
-    app.patch('/updateRecommendationCount/:id', async (req, res) => {
-      try {
-        const id = req.params.id;
-        const filter = { _id: ObjectId.createFromHexString(id) };
-        const updateDoc = {
-          $inc: { recommendation_count: 1 }
-        };
 
-        const result = await QuariesCollection.updateOne(filter, updateDoc);
 
-        if (result.matchedCount === 0) {
-          return res.status(404).send("Document not found");
-        }
-
-        res.send(result);
-      } catch (error) {
-        console.error("Error updating recommendation count:", error);
-        res.status(500).send("Internal Server Error");
-      }
-    });
-
-    // Routes for recommended collection
+    // Routes for Recommended Collection
     app.get('/recommended', async (req, res) => {
       const cursor = RecommendedCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
-    // ---------------------
     app.post('/recommended', async (req, res) => {
       const recommendation = req.body;
 
       try {
-        // Add recommendation to RecommendedCollection
         const result = await RecommendedCollection.insertOne(recommendation);
-
-        // Increment recommendation_count in QuariesCollection
         const queryId = recommendation.quaryId;
         await QuariesCollection.updateOne(
           { _id: ObjectId.createFromHexString(queryId) },
@@ -153,36 +150,23 @@ async function run() {
         res.status(500).send("Internal Server Error");
       }
     });
-
-
-
-    
     app.delete("/recommended/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: ObjectId.createFromHexString(id) };
-
-        // Fetch the recommendation to get the associated query ID
         const recommendation = await RecommendedCollection.findOne(query);
         const queryId = recommendation.quaryId;
-
-        // Delete the recommendation
         const result = await RecommendedCollection.deleteOne(query);
-
-        // Decrement recommendation_count in QuariesCollection
         await QuariesCollection.updateOne(
           { _id: ObjectId.createFromHexString(queryId) },
           { $inc: { recommendation_count: -1 } }
         );
-
         res.send(result);
       } catch (error) {
         console.error('Error deleting recommendation:', error);
         res.status(500).send("Internal Server Error");
       }
     });
-
-    // -----------------
     app.delete("/recommended/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId.createFromHexString(id) };
