@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-
+app.use(cookieParser())
 app.use(cors({
   origin: [
     "http://localhost:5173",
@@ -44,15 +45,19 @@ async function run() {
       })
         .send({ success: true });
     })
-    app.post('logout', async (req, res) => {
+
+    app.post('/logout', async (req, res) => {
       const user = req.body;
-      console.log('Log out user', user);
-      res.clearCookie('token', { maxAge: 0 }).send({ success: true });
+      console.log('logging out', user);
+      res
+        .clearCookie('token', { maxAge: 0, sameSite: 'none', secure: true })
+        .send({ success: true })
     })
 
 
     // Routes for Quaries Collection
     app.get('/users', async (req, res) => {
+      // console.log("cookkie" , req.cookies);
       const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
       res.send(result);
