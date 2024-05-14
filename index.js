@@ -26,6 +26,29 @@ const client = new MongoClient(uri, {
   }
 });
 
+// middileware
+
+const logger = (req, res, next) => {
+  console.log(`logInfo ${req.method} ${req.url}`);
+  next();
+}
+
+const varifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  // console.log("token in middile ware" , token);
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKON_SECRET, (err, user) => {
+    if (err) {
+      return res.Status(403).send({ message: 'unauthorized access' });
+    } else {
+      req.user = user;
+      next();
+    }
+  })
+}
+
 async function run() {
   try {
     await client.connect();
@@ -33,11 +56,16 @@ async function run() {
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
     // auth api
-    app.post('/jwt', async (req, res) => {
+ 
+    // logger, varifyToken,
+    // if(req.user.email !== req.query.email) {
+    //   return res.status(401).send({ message: 'Forbidan access' });
+    // }
+
+    app.post('/jwt',  async (req, res) => {
       const user = req.body;
       console.log('user token', user);
       const token = jwt.sign(user, process.env.ACCESS_TOKON_SECRET, { expiresIn: '1h' });
-
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -57,7 +85,6 @@ async function run() {
 
     // Routes for Quaries Collection
     app.get('/users', async (req, res) => {
-      // console.log("cookkie" , req.cookies);
       const cursor = QuariesCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -68,19 +95,20 @@ async function run() {
       const result = await QuariesCollection.insertOne(user);
       res.send(result);
     });
-
-    app.get('/users/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId.createFromHexString(id) };
-      const user = await QuariesCollection.findOne(query);
-      res.send(user);
-    });
-
     app.get('/user/last', async (req, res) => {
       const cursor = QuariesCollection.find().sort({ _id: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
+    app.get('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      
+      const query = { _id: ObjectId.createFromHexString(id) };
+      const user = await QuariesCollection.findOne(query);
+      res.send(user);
+    });
+
+    
 
     app.get('/new', async (req, res) => {
       const cursor = QuariesCollection.find();
@@ -133,14 +161,13 @@ async function run() {
 
 
     // Routes for Recommended Collection
-    app.get('/recommended', async (req, res) => {
+    app.get('/recommended',async (req, res) => {
       const cursor = RecommendedCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
     app.post('/recommended', async (req, res) => {
       const recommendation = req.body;
-
       try {
         const result = await RecommendedCollection.insertOne(recommendation);
         const queryId = recommendation.quaryId;
