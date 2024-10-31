@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
-
 const app = express();
 const port = process.env.PORT || 5000;
 app.use(cookieParser())
@@ -12,7 +11,8 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://assienment-11.firebaseapp.com",
-    "https://assienment-11.web.app"
+    "https://assienment-11.web.app",
+    "https://othoba-com.netlify.app"
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
@@ -63,17 +63,17 @@ async function run() {
     const RecommendedCollection = client.db('assainment11').collection("Recommended");
 
     // auth api
- 
+
     // logger, varifyToken,
     // if(req.user.email !== req.query.email) {
     //   return res.status(401).send({ message: 'Forbidan access' });
     // }
 
-    app.post('/jwt',  async (req, res) => {
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
       console.log('user token', user);
       const token = jwt.sign(user, process.env.ACCESS_TOKON_SECRET, { expiresIn: '1h' });
-      res.cookie('token', token, cookieOptions )
+      res.cookie('token', token, cookieOptions)
         .send({ success: true });
     })
 
@@ -81,9 +81,10 @@ async function run() {
       const user = req.body;
       console.log('logging out', user);
       res
-        .clearCookie('token', {...cookieOptions , maxAge: 0 })
+        .clearCookie('token', { ...cookieOptions, maxAge: 0 })
         .send({ success: true })
     })
+
 
 
     // Routes for Quaries Collection
@@ -105,13 +106,13 @@ async function run() {
     });
     app.get('/users/:id', async (req, res) => {
       const id = req.params.id;
-      
+
       const query = { _id: ObjectId.createFromHexString(id) };
       const user = await QuariesCollection.findOne(query);
       res.send(user);
     });
 
-    
+
 
     app.get('/new', async (req, res) => {
       const cursor = QuariesCollection.find();
@@ -164,7 +165,7 @@ async function run() {
 
 
     // Routes for Recommended Collection
-    app.get('/recommended',async (req, res) => {
+    app.get('/recommended', async (req, res) => {
       const cursor = RecommendedCollection.find();
       const result = await cursor.toArray();
       res.send(result);
